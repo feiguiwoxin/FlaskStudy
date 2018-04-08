@@ -1,8 +1,30 @@
 {% extends "base.html" %}
+{% import "bootstrap/wtf.html" as wtf %}
+{% import "_macros.html" as macros %}
 
 {% block title %}Demo小站主页{% endblock %}
 {% block page_content %}
     <div class="page-header">
-        <h1>Hello,{% if current_user.is_authenticated %} {{current_user.username}} {% else %} Stranger {% endif %}</h1>
+        <h1>您好,{% if current_user.is_authenticated %} {{current_user.username}} {% else %} 游客 {% endif %}</h1>
     </div>
+
+    <div>
+        {% if current_user.can(Permission.WRITE_ARTICLES) %}
+            {{ wtf.quick_form(form) }}
+        {% endif %}
+    </div>
+
+    {% include "_post.html" %}
+
+    {% if pagination %}
+    <div class="pagination">
+        {{ macros.pagination_widget(pagination, 'main.index') }}
+    </div>
+    {% endif %}
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="/static/Markdown.Converter.min.js"></script>
+<script src="/static/Markdown.Sanitizer.min.js"></script>
 {% endblock %}

@@ -1,7 +1,8 @@
-from wtforms import StringField,TextAreaField,SubmitField,SelectField,BooleanField,PasswordField
+from wtforms import StringField,TextAreaField,SubmitField,SelectField,BooleanField
 from flask_wtf import FlaskForm
-from wtforms.validators import DataRequired,Email,ValidationError,Length,Regexp,EqualTo
+from wtforms.validators import DataRequired,Email,ValidationError,Length,Regexp
 from app.models import role,user
+from flask_pagedown.fields import PageDownField
 
 
 class UserEditInfoForm(FlaskForm):
@@ -34,4 +35,8 @@ class AdminEditInfoForm(FlaskForm):
         if field.data != self.tmpuser.username \
             and user.query.filter_by(username = field.data).first():
             raise ValidationError("该用户名已被人注册，无法使用")
+
+class PostForm(FlaskForm):
+    body = PageDownField("想写点什么？", validators=[DataRequired()])
+    submit = SubmitField("提交")
 

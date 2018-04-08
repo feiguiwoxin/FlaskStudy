@@ -1,27 +1,37 @@
 {% extends "base.html" %}
+{% import "_macros.html" as macros %}
 
 {% block title %}{{visted_user.username}}的个人信息{% endblock %}
 
 {% block page_content %}
 <div class="page-header">
-    <h1>{{visted_user.username}}</h1><br/>
-    用户组：{{visted_user.role.name}}<br/>
-    {% if visted_user.location %}
-        地址：{{visted_user.location}}<br/>
-    {% endif %}
-    {% if current_user.is_administer() or visted_user == current_user %}
-        <a href="mailto:{{visted_user.email}}">邮箱：{{visted_user.email}}</a><br/>
-    {% endif %}
-    {% if visted_user.about_me %}<p>关于自己：{{visted_user.about_me}}</p>{% endif %}
-    <p>
-        帐号创建于{{visted_user.register_time}}<br/>最后访问于{{visted_user.last_time}}
-    </p>
-    {% if visted_user == current_user %}
-        <a class="btn btn-default" href="{{url_for('main.editinfo')}}">修改资料</a>
-    {% endif %}
+    <img class="img-rounded profile-thumbnail" src = "{{ visted_user.get_image_url(size = 256) }}">
+    <div class="profile-header">
+        <h1>{{visted_user.username}}</h1><br/>
+        用户组：{{visted_user.role.name}}<br/>
+        {% if visted_user.location %}
+            地址：{{visted_user.location}}<br/>
+        {% endif %}
+        {% if current_user.is_administer() or visted_user == current_user %}
+            <a href="mailto:{{visted_user.email}}">邮箱：{{visted_user.email}}</a><br/>
+        {% endif %}
+        {% if visted_user.about_me %}<p>关于自己：{{visted_user.about_me}}</p>{% endif %}
+        <p>
+            帐号创建于{{visted_user.register_time}}<br/>最后访问于{{visted_user.last_time}}
+        </p>
 
-    {% if current_user.is_administer() %}
-        <a class="btn btn-danger" href="{{url_for('main.editinfo_admin', id = visted_user.id)}}">修改资料(All)</a>
-    {% endif %}
+        {% if current_user.is_administer() %}
+            <a class="btn btn-danger" href="{{url_for('main.editinfo_admin', id = visted_user.id)}}">修改资料(All)</a>
+        {% elif visted_user == current_user %}
+            <a class="btn btn-default" href="{{url_for('main.editinfo')}}">修改资料</a>
+        {% endif %}
+    </div>
 </div>
+    <h3>该用户的文章</h3>
+    {% include "_post.html" %}
+    {% if pagination %}
+        <div class="pagination">
+            {{ macros.pagination_widget(pagination, "main.userinfo", username = visted_user.username) }}
+        </div>
+    {% endif %}
 {% endblock %}
