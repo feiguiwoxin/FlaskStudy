@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% import "_macros.html" as macros %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block page_content %}
+    <h1>{{ visted_user.username }} 的{{ title }}</h1>
+    <table class="table table-bordered">
+        <tr><th>用户</th><th>时间</th></tr>
+        {% for follow in follows %}
+            {% if follow['user'] != visted_user %}
+                <tr>
+                    <td>
+                        <a href="{{ url_for('main.userinfo', username = follow['user'].username) }}">
+                            <img class = "img-rounded" src="{{ follow['user'].get_image_url(size = 32) }}">
+                            {{ follow['user'].username }}
+                        </a>
+                    </td>
+                    <td style = "vertical-align: middle">
+                        {{ follow['time'] }}
+                    </td>
+                </tr>
+            {% endif %}
+        {% endfor %}
+    </table>
+
+    {% if pagination %}
+        {{ macros.pagination_widget(pagination, endpoint, username = visted_user.username) }}
+    {% endif %}
+{% endblock %}

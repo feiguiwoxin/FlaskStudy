@@ -8,6 +8,12 @@ from datetime import datetime
 from markdown import markdown
 import bleach,hashlib
 
+class follow(db.Model):
+    __tablename__ = "follows"
+    follower_id = db.Column(db.Integer, db.ForeignKey("users.id"), primary_key=True)
+    followed_id = db.Column(db.Integer, db.ForeignKey("users.id"), primary_key=True)
+    time = db.Column(db.DateTime,default=datetime.now)
+
 class user(db.Model,UserMixin):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
@@ -23,6 +29,16 @@ class user(db.Model,UserMixin):
     confirmed = db.Column(db.BOOLEAN, default=False)
     role_id = db.Column(db.Integer,db.ForeignKey("roles.id"))
     posts = db.relationship("Post", backref = "user", lazy = 'dynamic')
+    followers = db.relationship("follow",
+                                foreign_keys = [follow.follower_id],
+                                backref = db.backref("follower", lazy = 'joined'),
+                                lazy = 'dynamic',
+                                cascade='all, delete-orphan')
+    followeds = db.relationship("follow",
+                                foreign_keys = [follow.followed_id],
+                                backref = db.backref("followed",lazy='joined'),
+                                lazy = 'dynamic',
+                                cascade='all, delete-orphan')
 
     def __init__(self, **kwargs):
         super(user, self).__init__(**kwargs)
@@ -35,6 +51,8 @@ class user(db.Model,UserMixin):
         if self.email is not None and self.image_hash is None:
             self.image_hash = hashlib.md5(self.email.encode("utf-8")).hexdigest()
 
+        self.follow(self)
+
     def can(self,permissions):
         return self.role is not None and (self.role.permission & permissions == permissions)
 
@@ -46,9 +64,30 @@ class user(db.Model,UserMixin):
         db.session.add(self)
         db.session.commit()
 
+    def follow(self, tmpuser):
+        if not self.is_following(tmpuser):
+            f = follow(follower = self, followed = tmpuser)
+            db.session.add(f)
+
+    def unfollow(self, tmpuser):
+        if self.is_following(tmpuser):
+            f = self.followers.filter_by(followed_id = tmpuser.id).first()
+            db.session.delete(f)
+
+
+    def is_following(self,tmpuser):
+        return self.followers.filter_by(followed_id = tmpuser.id).first() is not None
+
+    def is_followed_by(self,tmpuser):
+        return self.followeds.filter_by(follower_id = tmpuser.id).first() is not None
+
     @property
     def password(self):
         return AttributeError("password can not readable")
+
+    @property
+    def get_followed_posts(self):
+        return Post.query.join(follow, follow.followed_id == Post.user_id).filter(follow.follower_id == self.id)
 
     @password.setter
     def password(self,password):
@@ -112,6 +151,14 @@ class user(db.Model,UserMixin):
                 db.session.commit()
             except IntegrityError:
                 db.session.rollback()
+
+    @staticmethod
+    def add_self_followed():
+        for tmpuser in user.query.all():
+            if not tmpuser.is_following(tmpuser):
+                tmpuser.follow(tmpuser)
+                db.session.add(tmpuser)
+                db.session.commit()
 
 class role(db.Model):
     __tablename__ = "roles"

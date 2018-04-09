@@ -8,7 +8,6 @@
     <img class="img-rounded profile-thumbnail" src = "{{ visted_user.get_image_url(size = 256) }}">
     <div class="profile-header">
         <h1>{{visted_user.username}}</h1><br/>
-        用户组：{{visted_user.role.name}}<br/>
         {% if visted_user.location %}
             地址：{{visted_user.location}}<br/>
         {% endif %}
@@ -17,7 +16,29 @@
         {% endif %}
         {% if visted_user.about_me %}<p>关于自己：{{visted_user.about_me}}</p>{% endif %}
         <p>
-            帐号创建于{{visted_user.register_time}}<br/>最后访问于{{visted_user.last_time}}
+            帐号创建于{{visted_user.register_time}} | 最后访问于{{visted_user.last_time}}<br/>
+            该用户一共发表了<span style="color: red">{{ visted_user.posts.count() }}</span>篇博文
+        </p>
+
+        <p>
+            {% if current_user.can(Permission.FOLLOW) and current_user != visted_user %}
+                {% if not current_user.is_following(visted_user) %}
+                    <a href="{{ url_for('main.follow', username = visted_user.username) }}"
+                       class="btn btn-primary">关注</a>
+                {% else %}
+                    <a href="{{ url_for('main.unfollow', username = visted_user.username) }}"
+                       class="btn btn-primary">取消关注</a>
+                {% endif %}
+            {% endif %}
+            <a href="{{ url_for('main.followers',username = visted_user.username) }}">
+                他/她的关注：<span class="badge">{{ visted_user.followers.count() - 1 }}</span>
+            </a>
+            <a href="{{ url_for('main.followeds',username = visted_user.username) }}">
+                他/她被关注：<span class="badge">{{ visted_user.followeds.count() - 1 }}</span>
+            </a>
+            {% if current_user.is_authenticated and visted_user != current_user and visted_user.is_following(current_user) %}
+                |<span class="label label-default">他/她关注了你</span>
+            {% endif %}
         </p>
 
         {% if current_user.is_administer() %}
