@@ -17,7 +17,8 @@
         {% if visted_user.about_me %}<p>关于自己：{{visted_user.about_me}}</p>{% endif %}
         <p>
             帐号创建于{{visted_user.register_time}} | 最后访问于{{visted_user.last_time}}<br/>
-            该用户一共发表了<span style="color: red">{{ visted_user.posts.count() }}</span>篇博文
+            该用户一共发表了<span style="color: red">{{ visted_user.posts.count() }}</span>篇博文,
+            <span style="color: red">{{ visted_user.comments.count() }}</span>篇评论。
         </p>
 
         <p>
@@ -31,13 +32,13 @@
                 {% endif %}
             {% endif %}
             <a href="{{ url_for('main.followers',username = visted_user.username) }}">
-                他/她的关注：<span class="badge">{{ visted_user.followers.count() - 1 }}</span>
+                &nbsp;&nbsp;&nbsp;&nbsp;该用户的关注：<span class="badge">{{ visted_user.followers.count() - 1 }}</span>
             </a>
             <a href="{{ url_for('main.followeds',username = visted_user.username) }}">
-                他/她被关注：<span class="badge">{{ visted_user.followeds.count() - 1 }}</span>
+                该用户被谁关注：<span class="badge">{{ visted_user.followeds.count() - 1 }}</span>
             </a>
             {% if current_user.is_authenticated and visted_user != current_user and visted_user.is_following(current_user) %}
-                |<span class="label label-default">他/她关注了你</span>
+                |<span class="label label-danger">关注了你</span>
             {% endif %}
         </p>
 
@@ -48,11 +49,29 @@
         {% endif %}
     </div>
 </div>
-    <h3>该用户的文章</h3>
-    {% include "_post.html" %}
+    <h3>用户足迹</h3>
+    <div class = "post-tabs">
+        <div class="nav nav-tabs">
+            <li {% if showwhat == "post" %} class="active" {% endif %}>
+                <a href="{{ url_for('main.userinfo', username = visted_user.username, showwhat = "post") }}">
+                    博客
+                </a>
+            </li>
+            <li {% if showwhat == "comment" %} class ="active" {% endif %}>
+                <a href="{{ url_for('main.userinfo', username = visted_user.username , showwhat = "comment") }}">
+                    评论
+                </a>
+            </li>
+        </div>
+        {% if showwhat == "post" %}
+            {% include "_post.html" %}
+        {% else %}
+            {% include "_comments.html" %}
+        {% endif %}
+    </div>
     {% if pagination %}
         <div class="pagination">
-            {{ macros.pagination_widget(pagination, "main.userinfo", username = visted_user.username) }}
+            {{ macros.pagination_widget(pagination, "main.userinfo", username = visted_user.username, showwhat = showwhat) }}
         </div>
     {% endif %}
 {% endblock %}

@@ -1,7 +1,7 @@
 from app.main import main
 from flask import render_template,abort,flash,redirect,url_for,request,make_response
-from app.models import user,role,Post,Permission
-from app.main.forms import UserEditInfoForm,AdminEditInfoForm,PostForm
+from app.models import user,role,Post,Permission,Comment
+from app.main.forms import UserEditInfoForm,AdminEditInfoForm,PostForm,CommmentForm
 from flask_login import current_user,login_required
 from app import db
 from app.decorator_permission import admin_required,permission_required
@@ -44,10 +44,19 @@ def userinfo(username):
     tmpuser = user.query.filter_by(username = username).first()
     if tmpuser is None:
         abort(404)
+    showwhat = request.args.get("showwhat", default="post")
     page = request.args.get("page", 1, type=int)
-    pagination = tmpuser.posts.order_by(Post.create_time.desc()).paginate(page, per_page=10, error_out=False)
+    if showwhat == "comment":
+        myquery = tmpuser.comments.order_by(Comment.time.desc())
+    else:
+        myquery = tmpuser.posts.order_by(Post.create_time.desc())
+        showwhat = "post"
+    pagination = myquery.paginate(page, per_page=10, error_out=False)
     posts = pagination.items
-    return render_template("userinfo.html", visted_user = tmpuser, posts = posts, pagination = pagination),200
+    comments = pagination.items
+    return render_template("userinfo.html", visted_user = tmpuser,
+                           posts = posts,comments = comments,
+                           pagination = pagination, showwhat = showwhat),200
 
 @main.route("/editinfo", methods = ('GET', 'POST'))
 @login_required
@@ -87,10 +96,23 @@ def editinfo_admin(id):
     form.role.data = tmpuser.role_id
     return render_template("edit_userinfo.html", form = form)
 
-@main.route("/post/<int:id>")
+@main.route("/post/<int:id>", methods= ('GET','POST'))
 def post(id):
     post = Post.query.get_or_404(id)
-    return render_template("post.html", posts = [post])
+    form = CommmentForm()
+    if form.validate_on_submit():
+        comment = Comment(body = form.body.data,
+                          post = post,
+                          user = current_user._get_current_object())
+        db.session.add(comment)
+        flash("您的评论已提交")
+        return redirect(url_for("main.post",id = id, page = -1))
+    page = request.args.get("page", 1 ,type=int)
+    if page == -1:
+        page = int((post.comments.count()-1)/10 + 1)
+    pagination = post.comments.order_by(Comment.time.asc()).paginate(page, per_page=10, error_out=False)
+    comments = pagination.items
+    return render_template("post.html", posts = [post], form = form, pagination = pagination, comments = comments)
 
 @main.route("/edit_post/<int:id>", methods = ('GET', 'POST'))
 @login_required
@@ -160,3 +182,38 @@ def followeds(username):
     follows = [{"user":item.follower, "time":item.time} for item in pagination.items]
     return render_template("follow.html", title = "被关注列表", visted_user = tmpuser,
                            pagination = pagination, follows = follows, endpoint = "main.followeds")
+
+@main.route("/manage_comment")
+@login_required
+@permission_required(Permission.MODRATE_COMMENTS)
+def manage_comment():
+    page = request.args.get("page", 1, type=int)
+    pagination = Comment.query.order_by(Comment.time.desc()).paginate(page, per_page=20, error_out=False)
+    comments = pagination.items
+    return render_template("manage_comment.html",pagination = pagination, comments = comments)
+
+@main.route("/manager/enable_comment/<int:id>")
+@login_required
+@permission_required(Permission.MODRATE_COMMENTS)
+def enable_comment(id):
+    comment = Comment.query.get_or_404(id)
+    comment.disable = False
+    db.session.add(comment)
+    url = request.args.get("next","main.index")
+    if url == "main.index":
+        return redirect(url_for(url))
+    else:
+        return redirect(url)
+
+@main.route("/manager/disable_comment/<int:id>")
+@login_required
+@permission_required(Permission.MODRATE_COMMENTS)
+def disable_comment(id):
+    comment = Comment.query.get_or_404(id)
+    comment.disable = True
+    db.session.add(comment)
+    url = request.args.get("next", "main.index")
+    if url == "main.index":
+        return redirect(url_for(url))
+    else:
+        return redirect(url)
