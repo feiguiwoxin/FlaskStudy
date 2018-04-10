@@ -1,0 +1,39 @@
+<ul class = "comments">
+    {% for comment in comments %}
+        <li class = "comment">
+            <div class="comment-thumbnail">
+                <a href = "{{ url_for('main.userinfo', username = comment.user.username) }}">
+                    <img class="img-rounded profile-thumbnail" src = "{{ comment.user.get_image_url(size = 40) }}">
+                </a>
+            </div>
+            <div class="comment-content">
+                <div class="comment-date">{{ moment(comment.time).fromNow() }}</div>
+                <div class="comment-author"><a href = "{{ url_for('main.userinfo', username = comment.user.username) }}">{{ comment.user.username }}</a></div>
+                {% if comment.disable %}
+                    <p STYLE="color: red"><i>该评论已被管理员屏蔽</i></p>
+                {% endif %}
+                {% if not comment.disable or current_user.can(Permission.MODRATE_COMMENTS) %}
+                    <div class="comment-body">
+                        {% if comment.html %}
+                            {{ comment.html | safe }}
+                        {% else %}
+                            {{ comment.body }}
+                        {% endif %}
+                    </div>
+                {% endif %}
+                <div class="post-footer">
+                    {% if showwhat %}
+                        <a href="{{ url_for("main.post", id = comment.post.id) }}"><span class="label label-default">原文链接</span></a>
+                    {% endif %}
+                    {% if current_user.can(Permission.MODRATE_COMMENTS) %}
+                        {% if comment.disable %}
+                            <a class="btn btn-default btn-xs" href="{{ url_for('main.enable_comment', id = comment.id, next = request.url) }}">解除屏蔽</a>
+                        {% else %}
+                            <a class="btn btn-default btn-xs" href="{{ url_for('main.disable_comment', id = comment.id, next = request.url) }}">屏蔽评论</a>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+        </li>
+    {% endfor %}
+</ul>

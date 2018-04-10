@@ -14,6 +14,25 @@ class follow(db.Model):
     followed_id = db.Column(db.Integer, db.ForeignKey("users.id"), primary_key=True)
     time = db.Column(db.DateTime,default=datetime.now)
 
+class Comment(db.Model):
+    __tablename__ = "comments"
+    id = db.Column(db.Integer,primary_key=True)
+    body = db.Column(db.Text)
+    html = db.Column(db.Text)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
+    post_id = db.Column(db.Integer, db.ForeignKey("posts.id"))
+    time = db.Column(db.DateTime, default=datetime.utcnow, index = True)
+    disable = db.Column(db.Boolean, default=False)
+
+    @staticmethod
+    def on_change_body(target, value, oldvalue, initer):
+        allow_flags = ['a', 'abbr', 'acronym', 'b', 'code', 'em', 'i','strong']
+        target.html = bleach.linkify(bleach.clean(
+            markdown(value, output_format = 'html'),
+            tags=allow_flags, strip=True))
+
+db.event.listen(Comment.body, 'set', Comment.on_change_body)
+
 class user(db.Model,UserMixin):
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
@@ -39,6 +58,7 @@ class user(db.Model,UserMixin):
                                 backref = db.backref("followed",lazy='joined'),
                                 lazy = 'dynamic',
                                 cascade='all, delete-orphan')
+    comments = db.relationship("Comment", backref = "user",lazy = "dynamic")
 
     def __init__(self, **kwargs):
         super(user, self).__init__(**kwargs)
@@ -196,6 +216,7 @@ class Post(db.Model):
     html = db.Column(db.Text)
     create_time = db.Column(db.DateTime, default=datetime.utcnow)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
+    comments = db.relationship("Comment", backref = "post", lazy = "dynamic")
 
     @staticmethod
     def generate_fake(count=100):
