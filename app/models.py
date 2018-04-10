@@ -159,18 +159,22 @@ class user(db.Model,UserMixin):
 
         seed()
         for i in range(count):
-            u = user(email = forgery_py.internet.email_address(),
-                     username = forgery_py.internet.user_name(),
+            email = forgery_py.internet.email_address()
+            if user.query.filter_by(email = email).first():
+                continue
+            username = forgery_py.internet.user_name()
+            if user.query.filter_by(username = username).first():
+                continue
+            u = user(email = email,
+                     username = username,
                      password = forgery_py.lorem_ipsum.word(),
                      confirmed = True,
                      location = forgery_py.address.city(),
                      about_me = forgery_py.lorem_ipsum.sentence(),
                      last_time = forgery_py.date.date(True))
             db.session.add(u)
-            try:
-                db.session.commit()
-            except IntegrityError:
-                db.session.rollback()
+            db.session.commit()
+
 
     @staticmethod
     def add_self_followed():
